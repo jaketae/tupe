@@ -13,6 +13,9 @@ class TUPEMultiHeadAttention(nn.Module):
         super().__init__()
         self.max_len = config.max_len
         self.num_heads = config.num_heads
+        self.num_buckets = config.num_buckets
+        self.max_distance = config.max_distance
+        self.bidirectional = config.bidirectional_bias
         self.scale = 1 / math.sqrt(2 * config.d_head)
 
         self.pos_embed = pos_embed
@@ -61,7 +64,9 @@ class TUPEMultiHeadAttention(nn.Module):
 
         attn = (tok_attn + pos_attn) / self.scale
         if self.relative_bias:
-            relative_positions = get_relative_positions(seq_len).to(attn.device)
+            relative_positions = get_relative_positions(
+                seq_len, self.bidirectional, self.num_buckets, self.max_distance
+            ).to(attn.device)
             # relative_positions.shape == (seq_len, seq_len)
             bias = self.bias(relative_positions + self.max_len)
             # bias.shape == (seq_len, seq_len, num_heads)
