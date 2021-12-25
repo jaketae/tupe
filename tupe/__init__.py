@@ -1,1 +1,1 @@
-from .core import TUPEMultiHeadAttention
+from .encoder import TUPEEncoder

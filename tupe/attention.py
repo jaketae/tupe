@@ -4,58 +4,28 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-
-def get_relative_positions(seq_len):
-    x = torch.arange(seq_len)[None, :]
-    y = torch.arange(seq_len)[:, None]
-    return x - y
-
-
-class AbsolutePositionalEmbedding(nn.Module):
-    def __init__(self, d_model: int, max_len: int) -> None:
-        super().__init__()
-        pe = torch.empty(max_len, d_model)
-        position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, d_model, 2).float() * (-math.log(10000) / d_model)
-        )
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer("pe", pe)
-
-    def forward(self, seq_len: int) -> torch.tensor:
-        # shape (1, seq_len, d_model)
-        return self.pe[:, :seq_len]
+from tupe.bias import get_relative_positions
+from tupe.config import TUPEConfig
 
 
 class TUPEMultiHeadAttention(nn.Module):
-    def __init__(
-        self,
-        d_model: int,
-        num_heads: int,
-        max_len: int,
-        dropout: float = 0.1,
-        relative_bias: bool = True,
-    ) -> None:
-        d_head, remainder = divmod(d_model, num_heads)
-        assert remainder == 0, "`d_model` should be divisible by `num_heads`"
+    def __init__(self, config: TUPEConfig, pos_embed: nn.Module) -> None:
         super().__init__()
-        self.max_len = max_len
-        self.num_heads = num_heads
-        self.scale = 1 / math.sqrt(2 * d_head)
+        self.max_len = config.max_len
+        self.num_heads = config.num_heads
+        self.scale = 1 / math.sqrt(2 * config.d_head)
 
-        self.norm = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(dropout)
-        self.pos_embed = AbsolutePositionalEmbedding(d_model, max_len)
+        self.pos_embed = pos_embed
+        self.norm = nn.LayerNorm(config.d_model)
+        self.dropout = nn.Dropout(config.dropout)
 
         # kqv in one pass
-        self.pos_kq = nn.Linear(d_model, 2 * d_model, bias=False)
-        self.tok_kqv = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.pos_kq = nn.Linear(config.d_model, 2 * config.d_model, bias=False)
+        self.tok_kqv = nn.Linear(config.d_model, 3 * config.d_model, bias=False)
 
-        self.relative_bias = relative_bias
-        if relative_bias:
-            self.bias = nn.Embedding(max_len * 2, num_heads)
+        self.relative_bias = config.relative_bias
+        if config.relative_bias:
+            self.bias = nn.Embedding(config.max_len * 2, config.num_heads)
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         batch_size, seq_len, _ = x.shape
@@ -105,5 +75,5 @@ class TUPEMultiHeadAttention(nn.Module):
         # out.shape == (batch_size, num_heads, seq_len, d_head)
         out = out.transpose(1, 2).reshape(batch_size, seq_len, -1)
         # out.shape == (batch_size, seq_len, d_model)
-
-        return self.dropout(out)
+        out = self.dropout(out)
+        return out
