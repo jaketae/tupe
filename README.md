@@ -2,6 +2,8 @@
 
 PyTorch implementation of [Rethinking Positional Encoding in Language Pre-training](https://arxiv.org/abs/2006.15595).
 
+![alt text](https://miro.medium.com/max/1200/1*TEG19rbIcY3znMBTpTrNjA.png)
+
 ## Quickstart
 
 Clone this repository.
