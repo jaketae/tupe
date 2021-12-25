@@ -16,7 +16,7 @@ class TUPEMultiHeadAttention(nn.Module):
         self.num_buckets = config.num_buckets
         self.max_distance = config.max_distance
         self.bidirectional = config.bidirectional_bias
-        self.scale = 1 / math.sqrt(2 * config.d_head)
+        self.scale = math.sqrt(2 * config.d_head)
 
         self.pos_embed = pos_embed
         self.norm = nn.LayerNorm(config.d_model)
