@@ -19,7 +19,6 @@ class TUPEMultiHeadAttention(nn.Module):
         self.scale = math.sqrt(2 * config.d_head)
 
         self.pos_embed = pos_embed
-        self.norm = nn.LayerNorm(config.d_model)
         self.dropout = nn.Dropout(config.dropout)
 
         # kqv in one pass
@@ -47,7 +46,7 @@ class TUPEMultiHeadAttention(nn.Module):
         pos_attn = torch.matmul(pos_query, pos_key)
         # pos_attn.shape == (batch_size, num_heads, seq_len, seq_len)
 
-        tok_key, tok_query, tok_value = self.tok_kqv(self.norm(x)).chunk(3, dim=-1)
+        tok_key, tok_query, tok_value = self.tok_kqv(x).chunk(3, dim=-1)
         tok_key = tok_key.view(batch_size, seq_len, self.num_heads, -1).permute(
             0, 2, 3, 1
         )

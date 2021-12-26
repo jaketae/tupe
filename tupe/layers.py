@@ -47,8 +47,10 @@ class TUPEEncoderLayer(nn.Module):
         super().__init__()
         self.ffn = FeedForward(config)
         self.attn = TUPEMultiHeadAttention(config, pos_embed)
+        self.ffn_norm = nn.LayerNorm(config.d_model)
+        self.attn_norm = nn.LayerNorm(config.d_model)
 
     def forward(self, x: torch.tensor) -> torch.tensor:
-        x = self.attn(x)
-        x = self.ffn(x)
+        x = x + self.attn(self.attn_norm(x))
+        x = x + self.ffn(self.ffn_norm(x))
         return x
